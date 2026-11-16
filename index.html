@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#101510" />
+  <title>IRON &amp; ASH — Field Command</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="game-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="Iron and Ash home"><span class="brand-mark">I<span>&amp;</span>A</span><span class="brand-name">IRON <i>&amp;</i> ASH<small>FIELD COMMAND</small></span></a>
+      <div class="battle-title"><span class="eyebrow">THE NORTHERN CAMPAIGN · DAY 14</span><strong>THE BATTLE OF GREYFORD</strong></div>
+      <div class="top-actions"><div class="resource"><span class="resource-icon">✦</span><span id="honor">240</span><small>HONOR</small></div><button class="icon-btn" id="soundBtn" title="Toggle sound" aria-label="Toggle sound">♫</button><button class="icon-btn" id="pauseBtn" title="Pause / resume" aria-label="Pause / resume">Ⅱ</button><button class="icon-btn" id="helpBtn" title="How to play" aria-label="How to play">?</button></div>
+    </header>
+    <section class="battle-layout">
+      <aside class="roster panel">
+        <div class="panel-heading"><div><span class="eyebrow">YOUR FORCES</span><h2>THE IRON LEGION</h2></div><span class="faction-badge blue-badge">◆</span></div>
+        <div class="army-strength"><div class="strength-label"><span>ARMY STRENGTH</span><b id="armyCount">72 / 72</b></div><div class="strength-bar"><span id="armyMeter"></span></div></div>
+        <div class="unit-list" id="unitList"></div>
+        <div class="roster-note"><span class="status-dot"></span><span>Awaiting your command</span><span class="mono" id="orderStatus">READY</span></div>
+      </aside>
+      <section class="field-wrap">
+        <div class="field-topline"><div class="battle-state"><span class="live-dot"></span><span id="battleStatus">ENGAGEMENT IN PROGRESS</span></div><div class="battle-clock"><span>ELAPSED</span><b id="clock">00:00</b></div><div class="speed-control"><button data-speed="1" class="speed active">1×</button><button data-speed="2" class="speed">2×</button><button data-speed="3" class="speed">3×</button></div></div>
+        <div class="map-frame"><canvas id="battlefield" aria-label="Top-down battlefield"></canvas><div class="map-overlay top-left"><span class="map-coord">GREYFORD VALLEY</span><span class="map-weather">☀ &nbsp; CLEAR · 18°C</span></div><div class="map-overlay top-right"><button id="mapExpand" title="Toggle fullscreen">⛶</button></div><div class="map-overlay bottom-left"><span class="north">N</span><span class="north-arrow">↑</span><span class="scale">━━━ <small>200 m</small></span></div><div class="map-overlay bottom-right"><div class="minimap" id="minimap"><canvas id="miniCanvas"></canvas><span class="mini-label">FIELD MAP</span></div></div><div class="toast" id="toast"></div><div class="battle-end hidden" id="battleEnd"><div class="end-kicker">THE FIELD IS DECIDED</div><h2 id="endTitle">VICTORY</h2><p id="endCopy">Greyford will remember this day.</p><button id="restartBtn" class="primary-btn">FIGHT AGAIN <span>↻</span></button></div></div>
+        <div class="map-legend"><span><i class="legend-dot blue"></i> YOUR LEGION</span><span><i class="legend-dot red"></i> ENEMY FORCES</span><span><i class="legend-ring"></i> CAPTURE POINT</span><span class="map-hint">RIGHT CLICK TO MOVE · WHEEL TO ZOOM</span></div>
+      </section>
+      <aside class="intel panel"><div class="panel-heading"><div><span class="eyebrow">FIELD INTELLIGENCE</span><h2>OBJECTIVES</h2></div><span class="intel-icon">⌖</span></div><div class="objective-list" id="objectiveList"></div><div class="intel-divider"></div><div class="command-head"><span class="eyebrow">SELECTED UNIT</span><span class="mono" id="selectedCount">NONE</span></div><div class="selected-unit" id="selectedInfo"><div class="empty-insignia">⌖</div><div><strong>No unit selected</strong><small>Choose a formation to issue orders</small></div></div><div class="unit-actions" id="unitActions"><button data-action="charge" title="Charge selected formation">⚔<span>CHARGE</span><kbd>C</kbd></button><button data-action="hold" title="Hold position">▣<span>HOLD</span><kbd>H</kbd></button><button data-action="retreat" title="Retreat selected formation">↶<span>RETREAT</span><kbd>R</kbd></button></div><div class="intel-divider"></div><div class="log-head"><span class="eyebrow">BATTLE REPORT</span><span class="report-live"><i></i> LIVE</span></div><div class="battle-log" id="battleLog"></div></aside>
+    </section>
+    <footer class="command-bar"><div class="commander"><div class="commander-portrait">⚜</div><div><span class="eyebrow">COMMANDER</span><strong>LEGATE MARCUS</strong></div><span class="commander-rank">IV</span></div><div class="command-center"><span class="command-tip"><kbd>1</kbd>–<kbd>4</kbd> SELECT FORMATION <i>·</i> <kbd>SPACE</kbd> PAUSE <i>·</i> RIGHT CLICK ISSUE ORDER</span><span class="command-quote" id="commanderQuote">“Hold the line. Let them break upon us.”</span></div><button class="retreat-btn" id="retreatAll"><span>↶</span> RETREAT ARMY</button></footer>
+  </main>
+  <div class="modal-backdrop hidden" id="helpModal"><section class="help-card"><button class="modal-close" id="closeHelp">×</button><span class="eyebrow">FIELD MANUAL · 01</span><h2>COMMAND THE FIELD</h2><p>Lead your formations to victory by capturing the three strategic positions around Greyford.</p><div class="help-grid"><div><span>SELECT</span><p>Click a formation, or drag to select multiple units. Use <kbd>1</kbd>–<kbd>4</kbd> for quick selection.</p></div><div><span>MOVE / ATTACK</span><p>Right-click the ground to move. Right-click an enemy to engage. Your troops fight automatically in range.</p></div><div><span>OBJECTIVES</span><p>Stand near a banner to capture it. Hold two or more positions to earn victory points.</p></div><div><span>TACTICS</span><p><kbd>C</kbd> charge · <kbd>H</kbd> hold position · <kbd>R</kbd> retreat. Use <kbd>Space</kbd> to pause.</p></div></div><button class="primary-btn" id="understood">UNDERSTOOD <span>→</span></button></section></div>
+  <script src="game.js"></script>
+</body>
+</html>
