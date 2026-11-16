@@ -5,6 +5,8 @@
   const W = 1600, H = 1000, $ = id => document.getElementById(id);
   let seed = 9147; const rand = () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
   const camera = { x: W / 2, y: H / 2, zoom: 1 }, selected = new Set();
+  const ZOOM_MIN = .72, ZOOM_MAX = 2.6, ZOOM_STEP = 1.35;
+  let zoomTarget = 1, zoomAnchor = null;
   let scale = 1, cw = 0, ch = 0, last = performance.now(), elapsed = 0, running = true, speed = 1, playerScore = 0, enemyScore = 0, ended = false, honor = 240, drag = null, toastTimer = 0, soundOn = false;
   const names = ['1st Legion · Hastati', '2nd Cohort · Archers', 'Ala · Equites', 'Praetorian Guard'];
   const types = ['infantry','archers','cavalry','infantry'];
@@ -28,7 +30,7 @@
     units.push(makeUnit('blue',0,235,345,24,names[0],'infantry'),makeUnit('blue',1,235,485,18,names[1],'archers'),makeUnit('blue',2,235,650,12,names[2],'cavalry'),makeUnit('blue',3,370,505,18,names[3],'infantry'));
     units.push(makeUnit('red',0,1365,335,23,'Black Banner · Raiders','infantry'),makeUnit('red',1,1365,490,18,'Longbow · Yeomen','archers'),makeUnit('red',2,1365,655,13,'Ashen Riders · Horse','cavalry'),makeUnit('red',3,1230,510,18,'Iron Guard · Men-at-arms','infantry'));
     units.filter(u=>u.team==='red').forEach((u,i)=>{u.target={x:850+rand()*120,y:[260,500,740,500][i]};u.mode='advance'});
-    camera.x=W/2;camera.y=H/2;camera.zoom=1;playerScore=enemyScore=0;elapsed=0;running=true;ended=false;speed=1;last=performance.now();
+    camera.x=W/2;camera.y=H/2;camera.zoom=1;zoomTarget=1;zoomAnchor=null;playerScore=enemyScore=0;elapsed=0;running=true;ended=false;speed=1;last=performance.now();updateZoomUI();
     $('battleEnd').classList.add('hidden');$('battleStatus').textContent='ENGAGEMENT IN PROGRESS';$('pauseBtn').textContent='Ⅱ';$('honor').textContent='240';
     document.querySelectorAll('.speed').forEach(b=>b.classList.toggle('active',b.dataset.speed==='1'));
     $('battleLog').innerHTML=''; log('Scouts report enemy formations advancing from the east.');log('Secure the <b>bridge</b> and high ground to turn the battle.'); toast('FIELD ORDERS RECEIVED'); renderUI();
@@ -130,7 +132,20 @@
   canvas.addEventListener('pointermove',e=>{if(!drag)return;const p=toWorld(...Object.values(pointer(e)));drag.x=Math.min(drag.startX,p.x);drag.y=Math.min(drag.startY,p.y);drag.w=Math.abs(drag.startX-p.x);drag.h=Math.abs(drag.startY-p.y)});
   canvas.addEventListener('pointerup',e=>{if(!drag)return;const d=drag;drag=null;const p=pointer(e),w=toWorld(p.x,p.y);if(Math.hypot(p.x-d.screenX,p.y-d.screenY)>8){selected.clear();units.filter(u=>u.team==='blue'&&alive(u)).forEach(u=>{const c=center(u);if(c.x>=d.x&&c.x<=d.x+d.w&&c.y>=d.y&&c.y<=d.y+d.h)selected.add(u)});renderUI();return}let nearest=null,dist=Infinity;for(const u of units){if(u.team!=='blue'||!alive(u))continue;const c=center(u),dd=distance(w,c);if(dd<dist){dist=dd;nearest=u}}if(nearest&&dist<55)selectOnly(nearest);else if(nearest&&dist<95){selected.add(nearest);renderUI()}else selectOnly(null)});
   canvas.addEventListener('contextmenu',e=>{e.preventDefault();const p=pointer(e),w=toWorld(p.x,p.y);let target=null,dist=Infinity;for(const u of units){if(u.team==='blue'||!alive(u))continue;const d=distance(w,center(u));if(d<dist){target=u;dist=d}}const group=[...selected];if(!group.length){toast('SELECT A FORMATION FIRST');return}if(target&&dist<55){group.forEach(u=>{u.mode='engage';u.attackTarget=target;u.target=center(target)});$('orderStatus').textContent='ATTACK';$('commanderQuote').textContent='“Put them to the sword!”';toast('ATTACKING ENEMY FORMATION');renderUI()}else order('move',w)});
-  canvas.addEventListener('wheel',e=>{e.preventDefault();const before=toWorld(...Object.values(pointer(e)));camera.zoom=clamp(camera.zoom*(e.deltaY<0?1.12:.89),.72,2.1);scale=Math.min(cw/W,ch/H)*camera.zoom;const after=toWorld(...Object.values(pointer(e)));camera.x+=before.x-after.x;camera.y+=before.y-after.y},{passive:false});
+  canvas.addEventListener('wheel',e=>{e.preventDefault();const p=pointer(e);zoomAt(camera.zoom*(e.deltaY<0?ZOOM_STEP:1/ZOOM_STEP),p.x,p.y)},{passive:false});
+  canvas.addEventListener('dblclick',e=>{e.preventDefault();const p=pointer(e);zoomAt(camera.zoom<1.55?1.9:1,p.x,p.y)});
+  function zoomAt(z,ax,ay){zoomTarget=clamp(z,ZOOM_MIN,ZOOM_MAX);zoomAnchor={x:ax??cw/2,y:ay??ch/2};updateZoomUI()}
+  function stepZoom(){
+    if(zoomAnchor==null)return;
+    if(Math.abs(zoomTarget-camera.zoom)<.002){camera.zoom=zoomTarget;scale=Math.min(cw/W,ch/H)*camera.zoom;zoomAnchor=null;updateZoomUI();return}
+    const before=toWorld(zoomAnchor.x,zoomAnchor.y);
+    camera.zoom+=(zoomTarget-camera.zoom)*.24;
+    scale=Math.min(cw/W,ch/H)*camera.zoom;
+    const after=toWorld(zoomAnchor.x,zoomAnchor.y);
+    camera.x+=before.x-after.x;camera.y+=before.y-after.y;
+    updateZoomUI();
+  }
+  function updateZoomUI(){const el=$('zoomLevel');if(!el)return;el.textContent=`${Math.round(camera.zoom*100)}%`;el.classList.toggle('limit',Math.abs(zoomTarget-ZOOM_MIN)<.001||Math.abs(zoomTarget-ZOOM_MAX)<.001)}
   $('minimap').addEventListener('pointerdown',e=>{const r=mini.getBoundingClientRect();camera.x=(e.clientX-r.left)/r.width*W;camera.y=(e.clientY-r.top)/r.height*H});
   document.querySelectorAll('.unit-actions button').forEach(b=>b.onclick=()=>order(b.dataset.action==='charge'?'charge':b.dataset.action==='hold'?'hold':'retreat'));
   document.querySelectorAll('.speed').forEach(b=>b.onclick=()=>{speed=Number(b.dataset.speed);document.querySelectorAll('.speed').forEach(x=>x.classList.toggle('active',x===b));toast(`${speed}× SPEED`)});
@@ -139,9 +154,16 @@
   $('helpBtn').onclick=()=>$('helpModal').classList.remove('hidden');$('closeHelp').onclick=$('understood').onclick=()=>$('helpModal').classList.add('hidden');$('helpModal').addEventListener('click',e=>{if(e.target===$('helpModal'))$('helpModal').classList.add('hidden')});
   $('soundBtn').onclick=()=>{soundOn=!soundOn;$('soundBtn').classList.toggle('active',soundOn);toast(soundOn?'FIELD AUDIO ON':'FIELD AUDIO OFF')};
   $('mapExpand').onclick=()=>{$('field-wrap').classList.toggle('fullscreen')};
+  $('zoomIn').onclick=()=>zoomAt(zoomTarget*ZOOM_STEP);
+  $('zoomOut').onclick=()=>zoomAt(zoomTarget/ZOOM_STEP);
+  $('zoomLevel').onclick=()=>{zoomAt(1);toast('ZOOM RESET')};
   document.querySelector('.field-wrap').id='field-wrap';
-  window.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();togglePause();return}if(e.repeat)return;if(e.key>='1'&&e.key<='4'){selectOnly(units.filter(u=>u.team==='blue')[Number(e.key)-1]);return}if(e.key.toLowerCase()==='c')order('charge');if(e.key.toLowerCase()==='h')order('hold');if(e.key.toLowerCase()==='r')order('retreat');if(e.key==='Escape'){$('helpModal').classList.add('hidden');$('field-wrap').classList.remove('fullscreen')}});
+  window.addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();togglePause();return}
+    if(e.key==='+'||e.key==='='){zoomAt(zoomTarget*ZOOM_STEP);return}
+    if(e.key==='-'||e.key==='_'){zoomAt(zoomTarget/ZOOM_STEP);return}
+    if(e.key==='0'){zoomAt(1);toast('ZOOM RESET');return}
+    if(e.repeat)return;if(e.key>='1'&&e.key<='4'){selectOnly(units.filter(u=>u.team==='blue')[Number(e.key)-1]);return}if(e.key.toLowerCase()==='c')order('charge');if(e.key.toLowerCase()==='h')order('hold');if(e.key.toLowerCase()==='r')order('retreat');if(e.key==='Escape'){$('helpModal').classList.add('hidden');$('field-wrap').classList.remove('fullscreen')}});
   window.addEventListener('resize',resize);
-  function frame(now){const dt=clamp((now-last)/1000,0,.05);last=now;if(running&&!ended)simulate(dt);$('clock').textContent=clockText();drawMap();if(Math.floor(now/280)!==Math.floor((now-dt*1000)/280))renderUI();requestAnimationFrame(frame)}
+  function frame(now){const dt=clamp((now-last)/1000,0,.05);last=now;if(running&&!ended)simulate(dt);stepZoom();$('clock').textContent=clockText();drawMap();if(Math.floor(now/280)!==Math.floor((now-dt*1000)/280))renderUI();requestAnimationFrame(frame)}
   resize();reset();$('helpModal').classList.add('hidden');requestAnimationFrame(frame);
 })();
